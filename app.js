@@ -1,4 +1,4 @@
-const Printer = require("./natives");
+const Printer = require("./printer");
 const CardReader = require("./reader");
 const PinPad = require("./epp");
 const ResultValues = require("./errors");

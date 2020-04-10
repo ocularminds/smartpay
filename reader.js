@@ -1,4 +1,4 @@
-const Printer = require("./natives");
+const Printer = require("./printer");
 const SessionFactory = require("./sessions");
 const AIDS = require("./aids");
 

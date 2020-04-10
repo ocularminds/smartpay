@@ -2,7 +2,7 @@ var ffi = require("@saleae/ffi");
 var ref = require("@saleae/ref");
 uChar = ref.refType("uchar");
 
-var print532 = ffi.Library("KMY532", {
+var print532 = ffi.Library("./libs/KMY532", {
   KMY_PRINT532_OpenPort: ["int", ["int", "int"]],
   KMY_PRINT532_ClosePort: ["int", []],
   KMY_PRINT532_Init: ["int", []],

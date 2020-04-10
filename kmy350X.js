@@ -7,7 +7,7 @@ var ArrayType = require("@saleae/ref-array");
 //var bytesPtr = ArrayType(ref.types.byte)
 var bytesPtr = ref.refType(ref.types.uchar);
 var intPtr = ref.refType("int");
-var KMY350XLibrary = ffi.Library("KMY350X", {
+var KMY350XLibrary = ffi.Library("./libs/KMY350X", {
   GetDllVer: ["int", ["string"]],
   OpenPort: ["int", ["int", "int"]],
   ClosePort: ["int", ["void"]],
