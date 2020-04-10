@@ -1,0 +1,28 @@
+{
+  "name": "smartpay",
+  "version": "1.0.0",
+  "description": "Kiosk Payment Integration",
+  "main": "app.js",
+  "bin": "bin.js",
+  "scripts": {
+    "app": "node main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "smartpay"
+  },
+  "keywords": [
+    "payment",
+    "kiosk",
+    "node",
+    "emv",
+    "pinpad"
+  ],
+  "author": "Jejelowo B Festus",
+  "license": "ISC",
+  "dependencies": {
+    "@saleae/ffi": "^3.0.2",
+    "@saleae/ref": "^2.0.1",
+    "@saleae/ref-array": "^2.0.1"
+  }
+}
