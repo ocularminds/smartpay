@@ -16,7 +16,7 @@ var bytePtr = ref.refType("byte");
 var intArray = ArrayType(ref.types.int);
 var byteArray = ArrayType(ref.types.byte);
 
-var CRT288 = ffi.Library("./libs/CRT_288_K001", {
+var CRT288 = ffi.Library("./libs/CRT_288_K001.dll", {
   GetSysVerion: ["int", ["string"]],
   CRT288KUOpen: ["int", []],
   CRT288KUClose: ["int", ["int"]],

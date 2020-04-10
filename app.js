@@ -1,7 +1,7 @@
-const Printer = require("./printer");
-const CardReader = require("./reader");
-const PinPad = require("./epp");
-const ResultValues = require("./errors");
+const Printer = require("./src/printer");
+const CardReader = require("./src/reader");
+const PinPad = require("./src/epp");
+const ResultValues = require("./src/errors");
 
 const main = () => {
   var version = Printer.getDllVersion();
