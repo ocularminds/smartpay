@@ -1,0 +1,10 @@
+{
+  "printer": {
+    "port": 2,
+    "buard": 38400
+  },
+  "pinpad": {
+    "port": 3,
+    "baurd": 9600
+  }
+}

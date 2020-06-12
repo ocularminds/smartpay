@@ -1,13 +1,9 @@
 var ffi = require("@saleae/ffi");
 var ref = require("@saleae/ref");
+const path = require("path");
 var ArrayType = require("@saleae/ref-array");
-
-//var bytesPtr = new Buffer(1024);
-//var bytesPtr = ref.refType("uint16");
-//var bytesPtr = ArrayType(ref.types.byte)
 var bytesPtr = ref.refType(ref.types.uchar);
-var intPtr = ref.refType("int");
-var KMY350XLibrary = ffi.Library("./libs/KMY350X", {
+var KMY350XLibrary = ffi.Library(path.join(__dirname, "libs/KMY350X"), {
   GetDllVer: ["int", ["string"]],
   OpenPort: ["int", ["int", "int"]],
   ClosePort: ["int", ["void"]],
@@ -27,7 +23,7 @@ var KMY350XLibrary = ffi.Library("./libs/KMY350X", {
   SetAccount: ["int", [bytesPtr]],
   SetClientSN: ["int", [bytesPtr]],
   ReadClientSN: ["int", [bytesPtr]],
-  GetVersion: ["int", ['string']],
+  GetVersion: ["int", ["string"]],
   MACAdd: ["int", [bytesPtr, bytesPtr, "int"]],
   SetMACArithmetic: ["int", ["int"]],
   SetPINRepairMethod: ["int", ["int", "byte"]],

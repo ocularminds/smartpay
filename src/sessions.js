@@ -1,5 +1,6 @@
 var ffi = require("@saleae/ffi");
 var ref = require("@saleae/ref");
+const path = require("path");
 var ArrayType = require("@saleae/ref-array");
 var commons = require("./commons");
 
@@ -14,18 +15,18 @@ const ERRORS = {
 var intPtr = ref.refType("int");
 var bytePtr = ref.refType("byte");
 var intArray = ArrayType(ref.types.int);
-var byteArray = ArrayType(ref.types.byte);
+var ByteArray = ArrayType(ref.types.byte);
 
-var CRT288 = ffi.Library("./libs/CRT_288_K001.dll", {
+var CRT288 = ffi.Library(path.join(__dirname, "libs/CRT_288_K001.dll"), {
   GetSysVerion: ["int", ["string"]],
   CRT288KUOpen: ["int", []],
   CRT288KUClose: ["int", ["int"]],
   CRT288KUMultOpen: ["int", [intArray, intPtr]],
   CRT288KUMultClose: ["int", [intArray, "int"]],
   GetDeviceCapabilities: ["int", ["int", intPtr, intPtr]],
-  ReadACKReport: ["int", ["int", byteArray, "byte"]],
-  ReadReport: ["int", ["int", byteArray, "byte"]],
-  WriteReport: ["int", ["int", byteArray, "byte"]],
+  ReadACKReport: ["int", ["int", ByteArray, "byte"]],
+  ReadReport: ["int", ["int", ByteArray, "byte"]],
+  WriteReport: ["int", ["int", ByteArray, "byte"]],
   USB_ExeCommand: [
     "int",
     [
@@ -33,12 +34,12 @@ var CRT288 = ffi.Library("./libs/CRT_288_K001.dll", {
       "byte",
       "byte",
       "int",
-      byteArray,
+      ByteArray,
       bytePtr,
       bytePtr,
       bytePtr,
       intPtr,
-      byteArray,
+      ByteArray,
     ],
   ],
   CRT288KROpen: ["int", ["string"]],
@@ -51,42 +52,42 @@ var CRT288 = ffi.Library("./libs/CRT_288_K001.dll", {
       "byte",
       "byte",
       "int",
-      byteArray,
+      ByteArray,
       bytePtr,
       bytePtr,
       bytePtr,
       intPtr,
-      byteArray,
+      ByteArray,
     ],
   ],
 });
 
 const SessionFactory = {
-  openUsb: () => {
-    var handle = CRT288.CRT288KUOpen();
+  openUsb: async () => {
+    var handle = await CRT288.CRT288KUOpen();
     return handle;
   },
-  openCom: (com, baurdRate) => {
-    var handle = CRT.CRT288KROpen(com, baurdRate);
+  openCom: async (com, baurdRate) => {
+    var handle = await CRT.CRT288KROpen(com, baurdRate);
     return handle;
   },
-  getDllVersion: () => {
+  getDllVersion: async () => {
     var version = Buffer.alloc(32);
-    CRT288.GetSysVerion(version);
+    await CRT288.GetSysVerion(version);
     console.log("DLL Version -> " + version);
     return ref.readCString(version, 0);
   },
-  initialize: (wHandle) => {
+  initialize: async (wHandle) => {
     CmData = [];
     CmCode = 0x30; // Initialize command
-    PmCode = 0x30; // Parameter code
+    PmCode = 0x31; // Parameter code(keep lockup)
     CmDataLen = 0;
     ReDataLen = ref.alloc("int");
-    ReData = new ArrayBuffer(1024);
+    ReData = ref.alloc(ByteArray);
     ReType = ref.alloc("byte");
     St0 = ref.alloc("byte");
     St1 = ref.alloc("byte");
-    var response = CRT288.USB_ExeCommand(
+    var response = await CRT288.USB_ExeCommand(
       wHandle,
       CmCode,
       PmCode,
@@ -99,6 +100,8 @@ const SessionFactory = {
       ReData
     );
     console.log("USB_ExeCommand - response: " + response);
+    console.log("type: ", ReType, " status ", St1, St0, " data ", ReData);
+    console.log("" + St1.deref() + St0.deref());
     console.log(ReType.deref() + " " + ERRORS[ReType.deref()]);
     if (ReType.deref() == 0x50 || ReType.deref() == 0x4e) {
       if (ReType.deref() == 0x50) {
@@ -110,18 +113,22 @@ const SessionFactory = {
     }
     return response;
   },
-  atr: (wHandle) => {
+  /**
+   * CPU Card Reset (Initialization)
+   */
+  atr: async (wHandle) => {
     console.log("\n REQUEST -> Activate CARD CPU");
     CmData = [0x30];
     CmCode = 0x51; // IC Card Control
     PmCode = 0x30; // Parameter code
     CmDataLen = 1;
     ReDataLen = ref.alloc("int");
-    ReData = new ArrayBuffer(1024);
+    ReData = Buffer.alloc(64);
+    ReData.type = ref.types.byte;
     ReType = ref.alloc("byte");
     St0 = ref.alloc("byte");
     St1 = ref.alloc("byte");
-    response = crt.USB_ExeCommand(
+    response = await CRT288.USB_ExeCommand(
       wHandle,
       CmCode,
       PmCode,
@@ -135,53 +142,52 @@ const SessionFactory = {
     );
     console.log(ReType.deref() + " " + ERRORS[ReType.deref()]);
     if (response == 0) {
-      if (ReDataLen.deref() == 0x30) {
-        System.out.println("CPU card is T=0");
+      if (ReDataLen.deref() === 0x30) {
+        console.log("CPU card is T=0");
       } else {
-        System.out.println("CPU card is T=1");
+        console.log("CPU card is T=1");
       }
 
-      var sb = "";
+      var sb = new ByteArray(ReDataLen.deref());
+      console.log("ATR: ", ReData.toString("hex"));
+      console.log("" + St1.deref() + St0.deref());
+      console.log(ReData.deref());
+
       if (ReType.deref() == 0x50) {
         // ATR= start from n= 1
-        console.log(new String(ReData));
-        for (let n = 1; n < ReDataLen.deref(); n++) {
-          try {
-            sb.append(String.format("%02x", ReData[n]));
-          } catch (ex) {
-            console.error(ex);
-          }
-        }
+        const len = ReDataLen.deref();
+        const data = ReData.toString("hex", 1, len);
+        console.log("EMV Card: ", data);
       }
       if (ReType.deref() == 0x4e && ReDataLen.deref() > 0) {
         //the card is not EMV
-        for (let n = 1; n < ReDataLen.deref(); n++) {
-          try {
-            sb.append(String.format("%02x", ReData[n]));
-          } catch (ex) {
-            console.error(ex);
-          }
-        }
+        const len = ReDataLen.deref();
+        const data = ReData.toString("hex", 0, len);
+        console.log("None EMV Card: ", data);
       }
-      console.log(sb);
       if (ReType.deref() == 0x4e && ReDataLen.deref() == 0) {
-        console.log("" + St1.deref() + St0.deref());
+        console.log("SW" + St1.deref() + St0.deref());
       }
     }
-    return response;
+    const protocol = ReDataLen.deref() === 0x30 ? "T0" : "T1";
+    return { response, protocol };
   },
-  getStatus: (wHandle) => {
+  /**
+   * Obtain status code ST0, ST1
+   */
+  getStatus: async (wHandle, protocol) => {
     console.log("\n REQUEST -> Reset status");
     CmData = [];
-    CmCode = 0x31; // Initialize command
-    PmCode = 0x30; // Parameter code
+    CmCode = 0x51; // Initialize command
+    PmCode = 0x32; // Parameter code
     CmDataLen = 0;
     ReDataLen = ref.alloc("int");
-    ReData = new ArrayBuffer(1024);
+    ReData = Buffer.alloc(512);
+    ReData.type = ref.types.byte;
     ReType = ref.alloc("byte");
     St0 = ref.alloc("byte");
     St1 = ref.alloc("byte");
-    response = crt.USB_ExeCommand(
+    response = await CRT288.USB_ExeCommand(
       wHandle,
       CmCode,
       PmCode,
@@ -213,7 +219,7 @@ const SessionFactory = {
           Str2 = "One card in the ICRW, but it is not inserted in place";
           break;
         case 50:
-          Str2 = "One card in the reader, but it is inserted in place";
+          Str2 = "One card in the reader, and it is inserted in place";
       }
       console.log(
         "Card Status OK\r\n" +
@@ -227,36 +233,49 @@ const SessionFactory = {
     }
     return response;
   },
-  execute: (wHandle, apdu) => {
+  /**
+   * CPU Card operation - CmCode 51
+   * 33H T=0 CPU Card APDU operation
+   * 34H T=1 CPU Card APDU operation
+   */
+  execute: async (wHandle, protocol, apdu) => {
     console.log("\nExchanges data between the Host Computer and IC card");
-    console.log("Sending apdu command: " + commons.byte2hex(apdu));
-    var sb = [];
+    console.log("APDU request: " + commons.byte2hex(apdu));
     var result = [];
     CmCode = 0x51; // IC card control
-    PmCode = 0x33; // Deactivate
+    PmCode = protocol === "T0" ? 0x33 : 0x34;
+    PmCode = 0x33;
+    ReData = Buffer.alloc(512);
+    ReDataLen = ref.alloc("int");
+    ReData.type = ref.types.byte;
     CmDataLen = apdu.length; // Data size
-    response = crt.USB_ExeCommand(
+    CmData = Buffer.from(apdu);
+    CmData.type = ref.types.byte;
+    response = await CRT288.USB_ExeCommand(
       wHandle,
       CmCode,
       PmCode,
       CmDataLen,
-      apdu,
+      CmData,
       ReType,
       St1,
       St0,
       ReDataLen,
       ReData
     );
-    console.log(ReType.deref() + " " + ERRORS[ReType.deref()]);
+    console.log("USB_ExeCommand - response: " + response);
     if (ReType.deref() == 0x50 || ReType.deref() == 0x4e) {
       if (ReType.deref() == 0x50) {
-        for (let n = 0; n < ref.deref(ReDataLen); n++) {
-          sb.append(util.format("%02x", ReData[n]));
-        }
+        const len = ReDataLen.deref();
+        const res = ReData.toString("hex", 0, len);
+        console.log("APDU response: " + res);
 
-        result[0] = sb.substring(sb.length - 4, sb.length);
-        if (sb.length > 4) {
-          result[1] = sb.substring(0, sb.length - 4);
+        result[0] = res.substring(res.length - 4, res.length);
+        result[1] = res.substring(0, res.length - 4);
+        if (result[0].substring(0, 2) === "6C") {
+          const le = result[0].substring(2, 4);
+          apdu = [0, -78, P1, P2, commons.hex2bytes(le)[0], 0];
+          result = SessionFactory.execute(wHandle, protocol, apdu);
         }
       } else {
         //(ReType==0x4e)
@@ -265,7 +284,6 @@ const SessionFactory = {
     } else {
       result[0] = "99";
     }
-    console.log("Sending apdu response: " + sb.join(""));
     return result;
   },
 };
@@ -279,11 +297,5 @@ var ReType;
 var St0;
 var St1;
 var ReData;
-
-var version = SessionFactory.getDllVersion();
-console.log(version);
-
-var wHandle = SessionFactory.openUsb();
-SessionFactory.initialize(wHandle);
 
 module.exports = SessionFactory;

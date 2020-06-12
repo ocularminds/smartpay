@@ -2,19 +2,18 @@
   "name": "smartpay",
   "version": "1.0.0",
   "description": "Kiosk Payment Integration",
-  "main": "app.js",
-  "bin": "bin.js",
+  "main": "pay.js",
+  "bin": "pay.js",
   "scripts": {
-    "app": "node main.js"
+    "app": "node pay.js"
   },
   "repository": {
     "type": "git",
-    "url": "smartpay"
+    "url": "https://github.com/ocularminds/smartpay"
   },
   "keywords": [
     "payment",
     "kiosk",
-    "node",
     "emv",
     "pinpad"
   ],
@@ -23,6 +22,7 @@
   "dependencies": {
     "@saleae/ffi": "^3.0.2",
     "@saleae/ref": "^2.0.1",
-    "@saleae/ref-array": "^2.0.1"
+    "@saleae/ref-array": "^2.0.1",
+    "node-tlv": "^1.5.13"
   }
 }
